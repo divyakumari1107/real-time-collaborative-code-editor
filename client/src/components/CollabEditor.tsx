@@ -15,16 +15,13 @@ export default function CollabEditor({ doc, provider, language }: Props) {
   const bindingRef = useRef<MonacoBinding>();
   const editorRef = useRef<MonacoTypes.editor.IStandaloneCodeEditor>();
 
-  const handleMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
+  const bindEditor = (editor: MonacoTypes.editor.IStandaloneCodeEditor) => {
     if (!doc || !provider) return;
-
     const ytext = doc.getText("monaco");
     const model = editor.getModel();
     if (!model) return;
 
-    // MonacoBinding wires up: text sync (Yjs <-> Monaco model) AND
-    // remote cursor / selection decorations, driven by `provider.awareness`.
+    bindingRef.current?.destroy();
     bindingRef.current = new MonacoBinding(
       ytext,
       model,
@@ -33,9 +30,21 @@ export default function CollabEditor({ doc, provider, language }: Props) {
     );
   };
 
+  const handleMount: OnMount = (editor) => {
+    editorRef.current = editor;
+    bindEditor(editor);
+  };
+
+  // Re-bind when provider or doc becomes available or changes
   useEffect(() => {
-    return () => bindingRef.current?.destroy();
-  }, []);
+    if (editorRef.current) {
+      bindEditor(editorRef.current);
+    }
+    return () => {
+      bindingRef.current?.destroy();
+      bindingRef.current = undefined;
+    };
+  }, [doc, provider]);
 
   return (
     <Editor

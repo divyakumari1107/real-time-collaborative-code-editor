@@ -1,107 +1,130 @@
-# Collab Code Editor
+# ⚡ Real-Time Collaborative Code Editor
 
-A real-time collaborative code editor — like Google Docs, but for code.
-Multiple people can edit the same file simultaneously, see each other's live
-cursors, keep working offline, and get AI-assisted suggestions, all synced
-through a CRDT (Conflict-free Replicated Data Type) core.
+A production-style real-time collaborative code editor — like **Google Docs + VS Code**. Multiple people can edit the same file simultaneously, see each other's live cursors and colored selections, keep working offline, and receive AI-assisted completions, all synced through a **CRDT (Conflict-free Replicated Data Type)** core.
 
-Built to go deeper than a typical "wire up a library" project: it includes a
-**from-scratch CRDT implementation** (`crdt-demo/`) written and stress-tested
-separately from the production sync engine, specifically to demonstrate
-understanding of *why* the algorithm works, not just that it does.
+![Architecture Status](https://img.shields.io/badge/Architecture-CRDT%20%2B%20WebSockets-brightgreen)
+![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TypeScript-blue)
+![Editor](https://img.shields.io/badge/Editor-Monaco%20Editor-007acc)
+![Sync](https://img.shields.io/badge/Sync-Yjs%20CRDT-orange)
+![Docker](https://img.shields.io/badge/Containerized-Docker%20Compose-2496ed)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-## Features
+---
 
-- 🔄 **Real-time sync** — edits propagate to all collaborators instantly via WebSocket + Yjs
-- 👥 **Live presence** — see collaborators' cursors, selections, and names as they type
-- 📴 **Offline-first** — keep editing with no connection; changes merge automatically on reconnect (IndexedDB + CRDT)
-- 🕐 **Version history** — browse and restore past snapshots of a document
-- 🤖 **AI co-editor** — inline code suggestions and plain-English change summaries via the Claude API
-- 🧠 **Custom CRDT from scratch** — a separately-implemented, stress-tested Logoot-style sequence CRDT (`crdt-demo/`), proving the sync algorithm is understood, not just imported
+## 🌟 Key Features
 
-## Architecture
+- 🔄 **Real-Time Synchronization**: Edits propagate to all collaborators instantly via WebSockets and binary Yjs protocol.
+- 👥 **Live Presence & Cursors**: See collaborators' cursors, selection highlights, and name tags in distinct colors as they type.
+- 📴 **Offline-First Resilience**: Edit seamlessly without internet connection; changes are saved locally to IndexedDB and automatically merge without conflict on reconnect.
+- 🕐 **Version History & Time-Travel**: Browse, inspect, and revert past document snapshots stored in SQLite.
+- 🤖 **AI Co-Editor**: Inline code completion and plain-English code diff summaries (supports Claude, Gemini, or smart fallback engine).
+- 🧠 **Standalone Custom CRDT (`crdt-demo/`)**: Includes a from-scratch Logoot-style sequence CRDT with 200 randomized stress tests proving convergence.
+
+---
+
+## 🏗️ Architecture
 
 ```
-┌─────────────┐        WebSocket (binary,        ┌─────────────┐
-│   Browser    │◄──────Yjs sync protocol)────────►│    Server    │
-│              │                                    │              │
-│ React        │        REST (history, AI,          │ Express      │
-│ Monaco Editor│◄──────rooms)──────────────────────►│ WebSocket    │
-│ Yjs doc      │                                    │ Yjs docs     │
-│ IndexedDB    │                                    │ SQLite       │
-│ (offline)    │                                    │ (persistence)│
-└─────────────┘                                    └──────┬───────┘
-                                                            │
-                                                            ▼
-                                                    ┌──────────────┐
-                                                    │ Anthropic API │
-                                                    │ (AI features) │
-                                                    └──────────────┘
+┌─────────────────────────────────┐        WebSocket (Binary Yjs Sync)       ┌─────────────────────────────────┐
+│        Client (Browser)         │◄────────────────────────────────────────►│        Server (Node.js)         │
+│                                 │                                          │                                 │
+│  React 18 + TypeScript          │        REST (Rooms, History, AI)         │  Express + WebSockets (`ws`)    │
+│  Monaco Editor (VS Code core)   │◄────────────────────────────────────────►│  Yjs Room Sync Manager          │
+│  Yjs Doc + Awareness            │                                          │  SQLite Persistence             │
+│  IndexedDB (Offline Cache)      │                                          │                                 │
+└─────────────────────────────────┘                                          └────────────────┬────────────────┘
+                                                                                              │
+                                                                                              ▼
+                                                                             ┌─────────────────────────────────┐
+                                                                             │  AI Engine (Claude/Gemini/Smart)│
+                                                                             └─────────────────────────────────┘
 ```
 
-- **`client/`** — React + TypeScript app. Monaco Editor bound to a Yjs
-  document via a custom WebSocket provider (`client/src/lib/wsProvider.ts`).
-  IndexedDB persists the document locally for offline editing.
-- **`server/`** — Node.js + Express + `ws`. Implements the Yjs sync protocol
-  by hand (`server/src/yjsRoom.ts`) so the wire format is fully visible
-  rather than hidden inside a library. Persists document snapshots + a
-  rolling history to SQLite. Proxies AI requests to the Anthropic API so the
-  API key never touches the browser.
-- **`crdt-demo/`** — A standalone, from-scratch CRDT implementation (no
-  dependency on Yjs), with a randomized stress test proving convergence
-  across concurrent, out-of-order edits. See its own
-  [README](./crdt-demo/README.md) for the algorithm write-up and a real bug
-  that was found and fixed while building it.
+---
 
-## Getting started
+## ⚡ 1-Click Quickstart (Docker Compose)
 
-### 1. Server
+### 1. Launch with Docker (Recommended)
+Make sure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is running, then run:
 
 ```bash
+docker compose up -d --build
+```
+*(On Windows, you can simply double-click **`run.bat`**)*
+
+### 2. Access the Applications
+* **Collaborative Editor**: [http://localhost:5173](http://localhost:5173)
+* **Backend Health Check**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
+
+Open [http://localhost:5173](http://localhost:5173), click **"+ New Document"**, and copy the URL into a second browser tab (or send it to a friend) to see real-time cursor tracking and typing sync!
+
+---
+
+## 🛠️ Local Development (Without Docker)
+
+### 1. Server
+```bash
 cd server
-cp .env.example .env
-# edit .env and add your ANTHROPIC_API_KEY if you want the AI features
 npm install
 npm run dev
 ```
-
 Server runs at `http://localhost:4000`.
 
 ### 2. Client
-
 ```bash
 cd client
-cp .env.example .env
 npm install
 npm run dev
 ```
+Client runs at `http://localhost:5173`.
 
-Client runs at `http://localhost:5173`. Open it, click **New Document**,
-then open the same URL in a second tab (or send it to a friend) to see live
-collaboration.
-
-### 3. (Optional) CRDT demo
-
+### 3. (Optional) Run Standalone CRDT Stress Test
 ```bash
 cd crdt-demo
 npm install
-npm run demo     # one worked example
-npm run stress    # 200 randomized convergence trials
+npm run stress     # 200 randomized convergence trials
 ```
 
-## Tech stack
+---
 
-React · TypeScript · Vite · Monaco Editor · Yjs · Node.js · Express · `ws` ·
-SQLite · Anthropic API
+## 📁 Repository Structure
 
-## Roadmap / possible extensions
+```text
+real-time-collaborative-code-editor/
+├── docker-compose.yml          # Container orchestration (Server + Client)
+├── run.bat                     # 1-click Windows launcher
+├── upload_to_github.bat        # Git push automation helper
+├── README.md                   # Complete documentation
+├── client/                     # React 18 + TypeScript frontend
+│   ├── Dockerfile
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── App.tsx             # Main collaborative room layout
+│       ├── Home.tsx            # Landing page (Create / Join room)
+│       ├── components/
+│       │   ├── CollabEditor.tsx # Monaco Editor + Yjs synchronization
+│       │   ├── PresenceBar.tsx  # Collaborator avatars & presence
+│       │   ├── AIAssistant.tsx  # AI code completion & diff explain
+│       │   └── VersionHistory.tsx
+│       └── lib/
+│           ├── useYjsRoom.ts    # Yjs connection hook
+│           └── wsProvider.ts    # Raw WebSocket Yjs sync provider
+├── server/                     # Node.js + Express + WebSocket backend
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       ├── index.ts            # Express server & WebSocket router
+│       ├── yjsRoom.ts          # Yjs binary sync protocol handler
+│       ├── persistence.ts      # SQLite document snapshots & history
+│       └── ai.ts               # AI proxy (Claude / Gemini / Fallback)
+└── crdt-demo/                  # From-scratch RGA/Logoot CRDT demo & tests
+    ├── src/logoot.ts
+    └── tests/stress.test.ts
+```
 
-- [ ] Multi-file workspaces (currently one document per room)
-- [ ] Syntax-aware AI suggestions per language
-- [ ] Voice chat alongside text sync (WebRTC audio)
-- [ ] Role-based permissions (owner / editor / viewer) and shareable invite links with scoped access
-- [ ] Swap the hand-rolled sync protocol for authenticated, rate-limited connections before any real deployment
+---
 
-## License
-
-MIT — use this however you'd like.
+## 📄 License
+MIT License — free for educational, presentation, and interview use.
