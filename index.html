@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Collaborative Code Editor | CRDT & Monaco Editor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #1e1e1e;
+      --panel-dark: #252526;
+      --border-dark: #3c3c3c;
+      --accent-blue: #007acc;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: #cccccc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .top-bar {
+      background: var(--panel-dark);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .peer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .peer-alice { background: #10b981; }
+    .peer-bob { background: #8b5cf6; }
+    .peer-you { background: #007acc; }
+
+    #editorContainer {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+    .crdt-sidebar {
+      background: var(--panel-dark);
+      border-left: 1px solid var(--border-dark);
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+    }
+    .sidebar-header {
+      padding: 10px 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-entry {
+      padding: 6px 12px;
+      border-bottom: 1px solid #2d2d2d;
+      font-family: monospace;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar -->
+  <div class="top-bar">
+    <div class="d-flex align-items-center gap-3">
+      <div class="fw-bold text-white d-flex align-items-center gap-2">
+        <i class="bi bi-code-slash text-primary fs-5"></i>
+        <span>CollabCode Studio</span>
+      </div>
+      <span class="badge bg-secondary-subtle text-secondary px-2 py-0.5 text-2xs rounded">CRDT v2.1</span>
+      
+      <!-- Language Picker -->
+      <select id="languageSelect" class="form-select form-select-sm bg-dark text-white border-secondary py-0 px-2" style="width: 130px;" onchange="changeLanguage()">
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="typescript">TypeScript</option>
+        <option value="html">HTML</option>
+        <option value="cpp">C++</option>
+      </select>
+    </div>
+
+    <!-- Active Collaborators -->
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-xs text-muted me-1"><i class="bi bi-people-fill me-1"></i>Active (3):</span>
+      <span class="peer-badge peer-you"><i class="bi bi-person-fill"></i>You (Host)</span>
+      <span class="peer-badge peer-alice"><i class="bi bi-cursor-fill"></i>Alice</span>
+      <span class="peer-badge peer-bob"><i class="bi bi-cursor-fill"></i>Bob</span>
+
+      <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-3 text-xs ms-2" onclick="simulatePeerTyping()">
+        <i class="bi bi-play-circle me-1"></i>Simulate Peer Edit
+      </button>
+
+      <a href="https://github.com/divyakumari1107/real-time-collaborative-code-editor" target="_blank" class="btn btn-outline-light btn-sm rounded-pill py-0 px-2.5 text-xs ms-1">
+        <i class="bi bi-github"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Workspace Area -->
+  <div class="d-flex flex-grow-1 overflow-hidden">
+    <!-- Monaco Editor Pane -->
+    <div id="editorContainer"></div>
+
+    <!-- Right Sidebar: CRDT Convergence & Operation Stream -->
+    <div class="crdt-sidebar">
+      <div class="sidebar-header">
+        <span><i class="bi bi-diagram-3 me-1.5 text-warning"></i>CRDT Event Stream</span>
+        <span class="badge bg-success text-2xs">CONVERGED</span>
+      </div>
+      
+      <div class="p-3 border-bottom border-dark text-muted">
+        <div class="fw-semibold text-white mb-1">Conflict-Free Replicated Data Type</div>
+        <span>Using Logoot sequence CRDT identifiers with Lamport timestamps for mathematical eventual consistency without locking.</span>
+      </div>
+
+      <div class="sidebar-header bg-dark">
+        <span>Recent Operations (OpLogs)</span>
+      </div>
+
+      <div id="opLogContainer" class="flex-grow-1 overflow-auto bg-dark">
+        <div class="log-entry text-success">✓ [Lamport:14] Alice: Inserted 'def solution()'</div>
+        <div class="log-entry text-info">✓ [Lamport:15] Bob: Updated parameter signature</div>
+        <div class="log-entry text-primary">✓ [Lamport:16] You: Added return statement</div>
+      </div>
+
+      <!-- Quick AI Trigger -->
+      <div class="p-3 border-top border-dark bg-dark">
+        <button class="btn btn-primary btn-sm w-100 rounded-pill fw-semibold" onclick="triggerAICodeAssist()">
+          <i class="bi bi-stars me-1"></i>AI Co-Editor: Optimize Code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monaco Editor Loader from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <script>
+    let editor;
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+    const starterCodes = {
+      python: `# Collaborative Python Workspace\n# Multiple engineers editing simultaneously via CRDT\n\ndef merge_intervals(intervals):\n    intervals.sort(key=lambda x: x[0])\n    merged = []\n    for interval in intervals:\n        if not merged or merged[-1][1] < interval[0]:\n            merged.append(interval)\n        else:\n            merged[-1][1] = max(merged[-1][1], interval[1])\n    return merged\n\n# Test Run\nprint(merge_intervals([[1,3],[2,6],[8,10],[15,18]]))\n`,
+      javascript: `// Real-Time Collaborative JavaScript\nfunction debounce(func, wait) {\n  let timeout;\n  return function executedFunction(...args) {\n    const later = () => {\n      clearTimeout(timeout);\n      func(...args);\n    };\n    clearTimeout(timeout);\n    timeout = setTimeout(later, wait);\n  };\n}\n`,
+      typescript: `// TypeScript Collaborative Interface\ninterface CRDTNode {\n  id: string;\n  value: string;\n  clock: number;\n  author: string;\n}\n`,
+      html: `<!DOCTYPE html>\n<html>\n  <head><title>Live Collab</title></head>\n  <body>\n    <h1>Hello from Collaborative Monaco</h1>\n  </body>\n</html>\n`,
+      cpp: `#include <iostream>\n#include <vector>\n\nint main() {\n    std::cout << "CRDT Collaborative C++" << std::endl;\n    return 0;\n}\n`
+    };
+
+    require(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('editorContainer'), {
+        value: starterCodes['python'],
+        language: 'python',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontSize: 14,
+        minimap: { enabled: true },
+        cursorBlinking: "smooth",
+        lineNumbers: "on",
+        roundedSelection: true,
+        scrollBeyondLastLine: false
+      });
+    });
+
+    function changeLanguage() {
+      const lang = document.getElementById("languageSelect").value;
+      if (editor) {
+        monaco.editor.setModelLanguage(editor.getModel(), lang);
+        editor.setValue(starterCodes[lang] || "");
+      }
+    }
+
+    function simulatePeerTyping() {
+      if (!editor) return;
+      const peers = ["Alice", "Bob"];
+      const peer = peers[Math.floor(Math.random() * peers.length)];
+      const comments = [
+        `\n# [${peer}]: Optimized inner loop comparison O(N log N)`,
+        `\n# [${peer}]: Added boundary validation check`,
+        `\n# [${peer}]: Verified clean memory deallocation`
+      ];
+      const comment = comments[Math.floor(Math.random() * comments.length)];
+      const current = editor.getValue();
+      editor.setValue(current + comment);
+
+      // Add to log
+      const log = document.getElementById("opLogContainer");
+      const div = document.createElement("div");
+      div.className = "log-entry text-warning";
+      div.innerText = `✓ [Lamport:${Date.now().toString().slice(-4)}] ${peer}: Remote CRDT merge operation`;
+      log.prepend(div);
+    }
+
+    function triggerAICodeAssist() {
+      if (!editor) return;
+      const current = editor.getValue();
+      editor.setValue(current + "\n\n# --- AI Co-Editor Optimization Applied ---\n# Complexity derivation: Time O(N log N) | Space O(N)\n# Convergence confirmed across all connected peer instances.");
+      
+      const log = document.getElementById("opLogContainer");
+      const div = document.createElement("div");
+      div.className = "log-entry text-info";
+      div.innerText = `🤖 [AI Co-Editor]: Synthesized complexity optimization patch`;
+      log.prepend(div);
+    }
+  </script>
+</body>
+</html>

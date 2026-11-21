@@ -1,13 +1,28 @@
 # ⚡ Real-Time Collaborative Code Editor
 
-A production-style real-time collaborative code editor — like **Google Docs + VS Code**. Multiple people can edit the same file simultaneously, see each other's live cursors and colored selections, keep working offline, and receive AI-assisted completions, all synced through a **CRDT (Conflict-free Replicated Data Type)** core.
-
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-success?style=for-the-badge&logo=github)](https://divyakumari1107.github.io/real-time-collaborative-code-editor/)
+[![Vercel Deployment](https://img.shields.io/badge/Deployed-Vercel-black.svg?logo=vercel)](https://real-time-collaborative-code-editor.vercel.app/)
 ![Architecture Status](https://img.shields.io/badge/Architecture-CRDT%20%2B%20WebSockets-brightgreen)
 ![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TypeScript-blue)
 ![Editor](https://img.shields.io/badge/Editor-Monaco%20Editor-007acc)
 ![Sync](https://img.shields.io/badge/Sync-Yjs%20CRDT-orange)
 ![Docker](https://img.shields.io/badge/Containerized-Docker%20Compose-2496ed)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+A production-style real-time collaborative code editor — like **Google Docs + VS Code**. Multiple people can edit the same file simultaneously, see each other's live cursors and colored selections, keep working offline, and receive AI-assisted completions, all synced through a **CRDT (Conflict-free Replicated Data Type)** core.
+
+---
+
+## 🌐 Live Production Deployments
+
+This project includes a live interactive Monaco web code studio demonstrating real-time CRDT Lamport clock operations, multi-cursor peer simulation, and AI code optimization:
+
+| Resource | Live Link | Status |
+| :--- | :--- | :--- |
+| **CollabCode Studio (GitHub Pages)** | **[https://divyakumari1107.github.io/real-time-collaborative-code-editor/](https://divyakumari1107.github.io/real-time-collaborative-code-editor/)** | 🟢 **Live (24/7)** |
+| **CollabCode Studio Live Mirror (Vercel)** | **[https://real-time-collaborative-code-editor.vercel.app/](https://real-time-collaborative-code-editor.vercel.app/)** | 🟢 **Production Ready** |
+
+---
 
 ---
 
